@@ -3,8 +3,18 @@ import numpy as np
 
 from pyquil.quil import Program
 from pyquil.gates import Z, X, H, CNOT, PHASE
-from pyquil.api import QVMConnection
-from math import pi
+from pyquil.api import QVMConnection, get_devices
+
+
+def distribution(data):
+    """ Distribution of measurement of quantum system """
+    combinations = {}
+    for result in data:
+        result_as_tuple = tuple(result)
+        if result_as_tuple not in combinations:
+            combinations[result_as_tuple] = 0
+        combinations[result_as_tuple] += 1
+    return combinations
 
 
 def create_singlet_state():
@@ -46,23 +56,30 @@ def add_switch_to_singlet_triplet_basis_gate_to_program(program):
 
 def main():
     qvm = QVMConnection()
-
+    agave = get_devices(as_dict=True)['8Q-Agave']
+    qvm_noisy = QVMConnection(agave)
     # Rotation
-    for angle in [0, pi/4, pi/2, 3*pi/4, pi]:
+    for t in range(0, 50):  # ns
         p = create_singlet_state()
         add_switch_to_singlet_triplet_basis_gate_to_program(p)
-
-        # Rotate phase to specified angle. In a real system, both spins/qubits are rotating,
-        # But the difference between angles is all that matters
-        p.inst(PHASE(angle, 0))
-        # Using custom gate defined in add_switch_to_singlet_triplet_basis_gate_to_program function
+        w_larmor = 0.46  # 4.6e8 1/s as determined in the experiment
+        p.inst(PHASE(w_larmor * t, 0))
         p.inst(("SWITCH_TO_SINGLET_TRIPLET_BASIS", 0, 1))
-        # p.inst(PHASE(pi/4, 1))
         wavefunction = qvm.wavefunction(p)
         probs = wavefunction.get_outcome_probs()
 
-        print("Rotation angle: %s", angle/pi*180)
-        print("Probabilities ('11' - Singlet, '00' - Triplet): %s" % probs)
+        p.measure(0, 0)
+        p.measure(1, 1)
+        data = qvm.run(p, trials=1000)
+
+        # simulate physical noise on QVM
+        data_noisy = qvm_noisy.run(p, trials=1000)
+
+        print("%s, %s, %s, %s, %s, %s, %s" %
+              (t, probs['11'], probs['00'],
+               distribution(data).get((1, 1), 0), distribution(data).get((0, 0), 0),
+               distribution(data_noisy).get((1, 1), 0), distribution(data_noisy).get((0, 0), 0),)
+              )
 
 
 if __name__ == '__main__':
