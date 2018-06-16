@@ -1,2 +1,4 @@
-pyquil==1.9.0
-numpy==1.14.4
+pyquil==1.9.0  # For Rigetti code
+numpy==1.14.4  # To make PyCharm happy
+IBMQuantumExperience==1.9.4   # For IBM Q code
+qiskit==0.5.4  # For IBM Q code
