@@ -46,10 +46,10 @@ def add_switch_to_singlet_triplet_basis_gate_to_program(program):
     # will represent the system in singlet/triplet basis
     # 11|> will mean Singlet state, and 00|> will mean Triplet state
     my_array = np.array([
-        [0, 1 / math.sqrt(2), 1 / math.sqrt(2), 0],
         [1, 0, 0, 0],
-        [0, 0, 0, 1],
+        [0, 1 / math.sqrt(2), 1 / math.sqrt(2), 0],
         [0, 1 / math.sqrt(2), -1 / math.sqrt(2), 0],
+        [0, 0, 0, 1],
     ])
     program.defgate("SWITCH_TO_SINGLET_TRIPLET_BASIS", my_array)
 
@@ -58,6 +58,8 @@ def main():
     qvm = QVMConnection()
     agave = get_devices(as_dict=True)['8Q-Agave']
     qvm_noisy = QVMConnection(agave)
+    print("Timestamp, Singlet (Wavefunction), Triplet (Wavefunction), Singlet (QVM), Triplet (QVM),"
+          "Singlet (Noise), Triplet (Noise), 00 (Noise), 11 (Noise)")
     # Rotation
     for t in range(0, 50):  # ns
         p = create_singlet_state()
@@ -74,11 +76,14 @@ def main():
 
         # simulate physical noise on QVM
         data_noisy = qvm_noisy.run(p, trials=1000)
+        noisy_data_distr = distribution(data_noisy)
 
-        print("%s, %s, %s, %s, %s, %s, %s" %
-              (t, probs['11'], probs['00'],
-               distribution(data).get((1, 1), 0), distribution(data).get((0, 0), 0),
-               distribution(data_noisy).get((1, 1), 0), distribution(data_noisy).get((0, 0), 0),)
+        print("%s, %s, %s, %s, %s, %s, %s, %s ,%s" %
+              (t, probs['01'], probs['10'],
+               distribution(data).get((0, 1), 0), distribution(data).get((1, 0), 0),
+               noisy_data_distr.get((0, 1), 0), noisy_data_distr.get((1, 0), 0),
+               noisy_data_distr.get((0, 0), 0), noisy_data_distr.get((1, 1), 0),
+               )
               )
 
 
