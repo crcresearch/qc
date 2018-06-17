@@ -25,6 +25,31 @@ My request was approved in a couple of hours, and I got 2 hour timeslot for day 
 
 ... 
 
-# Usage - IBM Q platform
+# Usage - IBM Q platform - simulator
 
-TBD
+Follow instructions on https://github.com/QISKit/qiskit-core#installation-1
+
+You don't need to provide credentials if you just run your code on simulator.
+
+
+# Usage - IBM Q platform - physical device
+
+Same as running on the simulator, but you should Create 'Qconfig.py' file in ibmq directory. Put in your API token
+
+```python
+APItoken = 'Your IBM Q API token'
+
+config = {
+    'url': 'https://quantumexperience.ng.bluemix.net/api',
+
+    # If you have access to IBM Q features, you also need to fill the "hub",
+    # "group", and "project" details. Replace "None" on the lines below
+    # with your details from Quantum Experience, quoting the strings, for
+    # example: 'hub': 'my_hub'
+    # You will also need to update the 'url' above, pointing it to your custom
+    # URL for IBM Q.
+    'hub': None,
+    'group': None,
+    'project': None
+}
+```
