@@ -3,7 +3,7 @@ import numpy as np
 
 from pyquil.quil import Program
 from pyquil.gates import Z, X, H, CNOT, PHASE
-from pyquil.api import QVMConnection, get_devices, QPUConnection
+from pyquil.api import QVMConnection, get_devices, QPUConnection, CompilerConnection
 
 
 def distribution(data):
@@ -46,10 +46,10 @@ def add_switch_to_singlet_triplet_basis_gate_to_program(program):
     # will represent the system in singlet/triplet basis
     # 11|> will mean Singlet state, and 00|> will mean Triplet state
     my_array = np.array([
-        [0, 1 / math.sqrt(2), 1 / math.sqrt(2), 0],
         [1, 0, 0, 0],
-        [0, 0, 0, 1],
+        [0, 1 / math.sqrt(2), 1 / math.sqrt(2), 0],
         [0, 1 / math.sqrt(2), -1 / math.sqrt(2), 0],
+        [0, 0, 0, 1],
     ])
     program.defgate("SWITCH_TO_SINGLET_TRIPLET_BASIS", my_array)
 
@@ -57,7 +57,10 @@ def add_switch_to_singlet_triplet_basis_gate_to_program(program):
 def main():
     qvm = QVMConnection()
     agave = get_devices(as_dict=True)['8Q-Agave']
+    compiler = CompilerConnection(agave)
     qpu = QPUConnection(agave)
+    print("Timestamp, Singlet (Wavefunction), Triplet (Wavefunction), Singlet (QVM), Triplet (QVM),"
+          "Singlet (QPU), Triplet (QPU), 00 (QPU), 11 (QPU)")
     # Rotation
     for t in range(0, 50):  # ns
         p = create_singlet_state()
@@ -70,16 +73,30 @@ def main():
 
         p.measure(0, 0)
         p.measure(1, 1)
+
+        print(p)
+        # Run the code on QVM
         data = qvm.run(p, trials=1000)
 
-        # simulate physical noise on QVM
+        # Run the code on QPU
         data_qpu = qpu.run(p, trials=1000)
 
-        print("%s, %s, %s, %s, %s, %s, %s" %
-              (t, probs['11'], probs['00'],
-               distribution(data).get((1, 1), 0), distribution(data).get((0, 0), 0),
-               distribution(data_qpu).get((1, 1), 0), distribution(data_qpu).get((0, 0), 0),)
-              )
+        job_id = compiler.compile_async(p)
+        job = compiler.wait_for_job(job_id)
+
+        print('compiled quil', job.compiled_quil())
+        print('gate volume', job.gate_volume())
+        print('gate depth', job.gate_depth())
+        print('topological swaps', job.topological_swaps())
+        print('program fidelity', job.program_fidelity())
+        print('multiqubit gate depth', job.multiqubit_gate_depth())
+
+        print("%s, %s, %s, %s, %s, %s, %s, %s, %s" %
+              (t, probs['01'], probs['10'],
+               distribution(data).get((0, 1), 0), distribution(data).get((1, 0), 0),
+               distribution(data_qpu).get((0, 1), 0), distribution(data_qpu).get((1, 0), 0),
+               distribution(data_qpu).get((1, 1), 0), distribution(data_qpu).get((0, 0), 0))
+        )
 
 
 if __name__ == '__main__':
