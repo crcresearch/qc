@@ -1,9 +1,11 @@
 import math
 import numpy as np
 
+# Documentation: http://pyquil.readthedocs.io/en/latest/
+
 from pyquil.quil import Program
 from pyquil.gates import Z, X, H, CNOT, PHASE
-from pyquil.api import QVMConnection, get_devices
+from pyquil.api import QVMConnection, get_devices, CompilerConnection
 
 
 def distribution(data):
@@ -59,7 +61,9 @@ def main():
     agave = get_devices(as_dict=True)['8Q-Agave']
     qvm_noisy = QVMConnection(agave)
     print("Timestamp, Singlet (Wavefunction), Triplet (Wavefunction), Singlet (QVM), Triplet (QVM),"
-          "Singlet (Noise), Triplet (Noise), 00 (Noise), 11 (Noise)")
+          "Singlet (Noise), Triplet (Noise), 00 (Noise), 11 (Noise),"
+          "Singlet (Compiled on QVM), Triplet (Compiled on QVM), 00 (Compiled on QVM), 11 (Compiled on QVM),"
+          )
     # Rotation
     for t in range(0, 50):  # ns
         p = create_singlet_state()
@@ -72,17 +76,37 @@ def main():
 
         p.measure(0, 0)
         p.measure(1, 1)
+        # Run on a perfect QVM (no noise)
         data = qvm.run(p, trials=1000)
 
         # simulate physical noise on QVM
         data_noisy = qvm_noisy.run(p, trials=1000)
         noisy_data_distr = distribution(data_noisy)
 
-        print("%s, %s, %s, %s, %s, %s, %s, %s ,%s" %
+        agave = get_devices(as_dict=True)['8Q-Agave']
+        compiler = CompilerConnection(agave)
+        job_id = compiler.compile_async(p)
+        # wait_for_job has print statement
+        # using this workaround to suppress it
+        import sys, os
+        _old_stdout = sys.stdout
+        with open(os.devnull, 'w') as fp:
+            sys.stdout = fp
+            job = compiler.wait_for_job(job_id)  # This is the only line that matters
+        sys.stdout = _old_stdout
+
+        # Run code compiled for 8Q-Agave on a noisy QVM
+        p_compiled = Program(job.compiled_quil())
+        data_compiled = qvm_noisy.run(p_compiled, trials=1000)
+        compiled_data_distr = distribution(data_compiled)
+
+        print("%s, %s, %s, %s, %s, %s, %s, %s ,%s, %s, %s, %s, %s" %
               (t, probs['01'], probs['10'],
                distribution(data).get((0, 1), 0), distribution(data).get((1, 0), 0),
                noisy_data_distr.get((0, 1), 0), noisy_data_distr.get((1, 0), 0),
                noisy_data_distr.get((0, 0), 0), noisy_data_distr.get((1, 1), 0),
+               compiled_data_distr.get((0, 1), 0), compiled_data_distr.get((1, 0), 0),
+               compiled_data_distr.get((0, 0), 0), compiled_data_distr.get((1, 1), 0),
                )
               )
 
