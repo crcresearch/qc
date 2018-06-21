@@ -8,6 +8,9 @@ from pyquil.gates import Z, X, H, CNOT, PHASE
 from pyquil.api import QVMConnection, get_devices, CompilerConnection
 
 
+FILENAME = "output.txt"
+
+
 def distribution(data):
     """ Distribution of measurement of quantum system """
     combinations = {}
@@ -64,6 +67,9 @@ def main():
           "Singlet (Noise), Triplet (Noise), 00 (Noise), 11 (Noise),"
           "Singlet (Compiled on QVM), Triplet (Compiled on QVM), 00 (Compiled on QVM), 11 (Compiled on QVM),"
           )
+
+    # Truncate file with compiled code
+    open(FILENAME, "w").close()
     # Rotation
     for t in range(0, 50):  # ns
         p = create_singlet_state()
@@ -96,7 +102,12 @@ def main():
         sys.stdout = _old_stdout
 
         # Run code compiled for 8Q-Agave on a noisy QVM
+        # Per example on https://github.com/rigetticomputing/pyquil/blob/master/examples/run_quil.py
         p_compiled = Program(job.compiled_quil())
+        with open(FILENAME, "a") as fp:
+            fp.write("Timestep: %s\n" % t)
+            fp.write("%s" % job.compiled_quil())
+            fp.write("\n")
         data_compiled = qvm_noisy.run(p_compiled, trials=1000)
         compiled_data_distr = distribution(data_compiled)
 
