@@ -1,6 +1,10 @@
+""" Estimate standard deviation for measurement error on a quantum computer """
+
+
 from qiskit import available_backends, execute
 
 from ibmq.core import create_quantum_program_to_simulate_quantum_beats
+
 
 if __name__ == "__main__":
     from qiskit import register
@@ -15,7 +19,7 @@ if __name__ == "__main__":
     w_larmor = 0.46  # 4.6e8 1/s as determined in the experiment
     print(available_backends())
     for t in range(0, 30):
-        circuit = create_quantum_program_to_simulate_quantum_beats(w_larmor * t)
+        circuit = create_quantum_program_to_simulate_quantum_beats(w_larmor*t)
         if 'ibmqx4' not in available_backends():
             raise RuntimeError("Can't execute the program on ibmqx4")
 

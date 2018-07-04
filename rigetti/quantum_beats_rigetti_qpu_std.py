@@ -75,8 +75,8 @@ def main():
           "11 Mean (QPU), 1 Std (QPU)")
     # Rotation
     fp_raw = open("output.txt", "w")
-    # for t in range(0, 30):  # ns
-    for t in np.arange(0.0, 30.0, 0.1):  # ns
+    for t in range(0, 30):  # ns
+    # for t in np.arange(0.0, 30.0, 0.1):  # ns
         p = create_singlet_state()
         add_switch_to_singlet_triplet_basis_gate_to_program(p)
         w_larmor = 0.46  # 4.6e8 1/s as determined in the experiment
